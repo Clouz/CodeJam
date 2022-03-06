@@ -29,7 +29,7 @@ func main() {
 }
 
 func Load() (error, []CodyJamal) {
-	//se sono in modalità debug verrà letto il file con l'imput al posto che lo stdin
+	//se sono in modalità debug verrà letto il file con l'input al posto che lo stdin
 	stdin := os.Stdin
 	if Debug {
 		f, err := os.Open("test")
@@ -120,12 +120,13 @@ func (c CodyJamal) Solve(StringArray []rune) []rune {
 
 	for {
 
-		pos := c.Position(result)
+		pos, pos2 := c.Position(result)
 		if pos == -1 {
 			break
 		}
 		prev := '?'
 		next := '?'
+		size := 1
 
 		if pos-1 >= 0 {
 			prev = StringArray[pos-1]
@@ -135,7 +136,24 @@ func (c CodyJamal) Solve(StringArray []rune) []rune {
 			next = StringArray[pos+1]
 		}
 
-		result[pos] = c.MinimumValue(prev, next)
+		if pos2 != -1 {
+			size = 2
+
+			if pos-1 >= 0 {
+				prev = StringArray[pos-1]
+			}
+
+			if pos2+1 <= lenArray-1 {
+				next = StringArray[pos2+1]
+			}
+
+		}
+
+		if size == 1 {
+			result[pos], _ = c.MinimumValue(prev, next, size)
+		} else {
+			result[pos], result[pos2] = c.MinimumValue(prev, next, size)
+		}
 	}
 
 	return result
@@ -143,32 +161,55 @@ func (c CodyJamal) Solve(StringArray []rune) []rune {
 
 //calcola il valore minimo considerando il carattere precedente e quello successivo
 //se non esiste il carattere precedente, successivo o entrambi devono essere impostati con un '?'
-func (c CodyJamal) MinimumValue(previous rune, next rune) rune {
+func (c CodyJamal) MinimumValue(previous rune, next rune, size int) (rune, rune) {
 	//each time CJ appears in the mural, Cody-Jamal must pay X
 	//each time JC appears in the mural, he must pay Y
-
-	//se non ci sono caratteri, inizializzo con la coppia dal costo minore
-	if previous == '?' && next == '?' {
-		if c.X < c.Y {
-			return 'C'
-		} else {
-			return 'J'
+	if size == 1 {
+		//se non ci sono caratteri, inizializzo con la coppia dal costo minore
+		if previous == '?' && next == '?' {
+			if c.X < c.Y {
+				return 'C', ' '
+			} else {
+				return 'J', ' '
+			}
 		}
-	}
 
-	jCase := []rune{previous, 'J', next}
-	cCase := []rune{previous, 'C', next}
-	if c.CalculateCost(jCase) <= c.CalculateCost(cCase) {
-		return 'J'
+		jCase := []rune{previous, 'J', next}
+		cCase := []rune{previous, 'C', next}
+		if c.CalculateCost(jCase) <= c.CalculateCost(cCase) {
+			return 'J', ' '
+		}
+		return 'C', ' '
+
+	} else {
+		test := [][]rune{{'J', 'C'}, {'J', 'J'}, {'C', 'J'}, {'C', 'C'}}
+		min := 0
+		var r1 rune
+		var r2 rune
+		for i, v := range test {
+			testCase := []rune{previous, v[0], v[1], next}
+			if i == 0 {
+				min = c.CalculateCost(testCase)
+				r1 = v[0]
+				r2 = v[1]
+			} else {
+				if c.CalculateCost(testCase) <= min {
+					min = c.CalculateCost(testCase)
+					r1 = v[0]
+					r2 = v[1]
+				}
+			}
+		}
+		return r1, r2
 	}
-	return 'C'
 }
 
 //restituisce la prima posizione con un ? che abbia C o J vicini
 //se non è presente restituisce -1
-func (c CodyJamal) Position(StringArray []rune) int {
+func (c CodyJamal) Position(StringArray []rune) (int, int) {
 	lenArray := len(StringArray)
 	result := -1
+	result2 := -1
 
 	for i := range StringArray {
 		//se non mi trovo un un ? continuo
@@ -199,7 +240,9 @@ func (c CodyJamal) Position(StringArray []rune) int {
 				result = i
 				break
 			}
-			continue
+			//se arrivato all'ultima posizione ho trovato solo ? restituisco la prima posizione
+			result = 0
+			break
 		}
 
 		//in tutti gli altri casi
@@ -214,7 +257,21 @@ func (c CodyJamal) Position(StringArray []rune) int {
 
 	}
 
-	return result
+	if result != -1 {
+		if result-1 >= 0 && StringArray[result-1] == '?' {
+			result2 = result - 1
+		}
+
+		if result+1 <= lenArray-1 && StringArray[result+1] == '?' {
+			result2 = result + 1
+		}
+	}
+
+	if result < result2 || result2 == -1 {
+		return result, result2
+	} else {
+		return result2, result
+	}
 }
 
 func (c CodyJamal) String() string {
